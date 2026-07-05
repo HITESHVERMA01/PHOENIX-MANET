@@ -77,6 +77,7 @@
 #include "ns3/dsr-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/yans-wifi-helper.h"
+#include "ns3/flow-monitor-module.h"
 
 using namespace ns3;
 using namespace dsr;
