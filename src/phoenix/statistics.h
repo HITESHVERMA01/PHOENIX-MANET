@@ -7,23 +7,23 @@
 namespace ns3
 {
 
-struct SimulationStatistics
+class SimulationStatistics
 {
-    // Packet Statistics
-    uint32_t txPackets = 0;
-    uint32_t rxPackets = 0;
-    uint32_t lostPackets = 0;
+public:
 
-    // Performance Metrics
-    double throughput = 0.0;
-    double delay = 0.0;
-    double jitter = 0.0;
-    double pdr = 0.0;
+    uint64_t txPackets;
+    uint64_t rxPackets;
+    uint64_t lostPackets;
 
-    // Energy
-    double initialEnergy = 0.0;
-    double remainingEnergy = 0.0;
-    double consumedEnergy = 0.0;
+    double throughput;
+    double delay;
+    double jitter;
+
+    double packetDeliveryRatio;
+
+    double energyConsumed;
+
+    SimulationStatistics();
 
     void Reset();
 
