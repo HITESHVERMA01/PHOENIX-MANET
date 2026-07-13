@@ -1,3 +1,5 @@
+
+
 /* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
 /*
  * Copyright (c) 2011 University of Kansas
@@ -67,7 +69,6 @@
 
 #include <fstream>
 #include <iostream>
-#include "ns3/flow-monitor-module.h"
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
@@ -138,7 +139,11 @@ private:
   std::string m_protocolName; //!< Protocol name.
   double m_txp;               //!< Tx power.
   bool m_traceMobility;       //!< Enavle mobility tracing.
-  uint32_t m_protocol;        //!< Protocol type.
+  uint32_t m_protocol;   
+
+FlowMonitorHelper m_flowHelper;
+
+Ptr<FlowMonitor> m_flowMonitor;    //!< Protocol type.
 };
 
 RoutingExperiment::RoutingExperiment ()
@@ -300,3 +305,130 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   NetDeviceContainer adhocDevices = wifi.Install (wifiPhy, wifiMac, adhocNodes);
 
   MobilityHelper mobilityAdhoc;
+  [[maybe_unused]] int64_t streamIndex = 0; // used to get consistent mobility across scenarios
+
+  ObjectFactory pos;
+  pos.SetTypeId ("ns3::RandomRectanglePositionAllocator");
+  pos.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=300.0]"));
+  pos.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1500.0]"));
+
+  Ptr<PositionAllocator> taPositionAlloc = pos.Create ()->GetObject<PositionAllocator> ();
+  streamIndex += taPositionAlloc->AssignStreams (streamIndex);
+
+  std::stringstream ssSpeed;
+  ssSpeed << "ns3::UniformRandomVariable[Min=0.0|Max=" << nodeSpeed << "]";
+  std::stringstream ssPause;
+  ssPause << "ns3::ConstantRandomVariable[Constant=" << nodePause << "]";
+  mobilityAdhoc.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
+                                  "Speed", StringValue (ssSpeed.str ()),
+                                  "Pause", StringValue (ssPause.str ()),
+                                  "PositionAllocator", PointerValue (taPositionAlloc));
+  mobilityAdhoc.SetPositionAllocator (taPositionAlloc);
+  mobilityAdhoc.Install (adhocNodes);
+  streamIndex += mobilityAdhoc.AssignStreams (adhocNodes, streamIndex);
+
+  AodvHelper aodv;
+  OlsrHelper olsr;
+  DsdvHelper dsdv;
+  DsrHelper dsr;
+  DsrMainHelper dsrMain;
+  Ipv4ListRoutingHelper list;
+  InternetStackHelper internet;
+
+  switch (m_protocol)
+    {
+    case 1:
+      list.Add (olsr, 100);
+      m_protocolName = "OLSR";
+      break;
+    case 2:
+      list.Add (aodv, 100);
+      m_protocolName = "AODV";
+      break;
+    case 3:
+      list.Add (dsdv, 100);
+      m_protocolName = "DSDV";
+      break;
+    case 4:
+      m_protocolName = "DSR";
+      break;
+    default:
+      NS_FATAL_ERROR ("No such protocol:" << m_protocol);
+    }
+
+  if (m_protocol < 4)
+    {
+      internet.SetRoutingHelper (list);
+      internet.Install (adhocNodes);
+    }
+  else if (m_protocol == 4)
+    {
+      internet.Install (adhocNodes);
+      dsrMain.Install (dsr, adhocNodes);
+    }
+
+  NS_LOG_INFO ("assigning ip address");
+
+  Ipv4AddressHelper addressAdhoc;
+  addressAdhoc.SetBase ("10.1.1.0", "255.255.255.0");
+  Ipv4InterfaceContainer adhocInterfaces;
+  adhocInterfaces = addressAdhoc.Assign (adhocDevices);
+
+  OnOffHelper onoff1 ("ns3::UdpSocketFactory",Address ());
+  onoff1.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"));
+  onoff1.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0.0]"));
+
+  for (int i = 0; i < nSinks; i++)
+    {
+      Ptr<Socket> sink = SetupPacketReceive (adhocInterfaces.GetAddress (i), adhocNodes.Get (i));
+
+      AddressValue remoteAddress (InetSocketAddress (adhocInterfaces.GetAddress (i), port));
+      onoff1.SetAttribute ("Remote", remoteAddress);
+
+      Ptr<UniformRandomVariable> var = CreateObject<UniformRandomVariable> ();
+      ApplicationContainer temp = onoff1.Install (adhocNodes.Get (i + nSinks));
+      temp.Start (Seconds (var->GetValue (100.0,101.0)));
+      temp.Stop (Seconds (TotalTime));
+    }
+
+  std::stringstream ss;
+  ss << nWifis;
+  std::string nodes = ss.str ();
+
+  std::stringstream ss2;
+  ss2 << nodeSpeed;
+  std::string sNodeSpeed = ss2.str ();
+
+  std::stringstream ss3;
+  ss3 << nodePause;
+  std::string sNodePause = ss3.str ();
+
+  std::stringstream ss4;
+  ss4 << rate;
+  std::string sRate = ss4.str ();
+
+  //NS_LOG_INFO ("Configure Tracing.");
+  //tr_name = tr_name + "_" + m_protocolName +"_" + nodes + "nodes_" + sNodeSpeed + "speed_" + sNodePause + "pause_" + sRate + "rate";
+
+  //AsciiTraceHelper ascii;
+  //Ptr<OutputStreamWrapper> osw = ascii.CreateFileStream ( (tr_name + ".tr").c_str());
+  //wifiPhy.EnableAsciiAll (osw);
+  AsciiTraceHelper ascii;
+  MobilityHelper::EnableAsciiAll (ascii.CreateFileStream (tr_name + ".mob"));
+
+  m_flowMonitor = m_flowHelper.InstallAll();
+
+
+  NS_LOG_INFO ("Run Simulation.");
+
+  CheckThroughput ();
+
+  Simulator::Stop (Seconds (TotalTime));
+  Simulator::Run ();
+  m_flowMonitor->CheckForLostPackets();
+
+  //flowmon->SerializeToXmlFile ((tr_name + ".flowmon").c_str(), false, false);
+
+  Simulator::Destroy ();
+}
+
