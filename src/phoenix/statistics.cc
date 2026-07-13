@@ -3,6 +3,11 @@
 namespace ns3
 {
 
+SimulationStatistics::SimulationStatistics()
+{
+    Reset();
+}
+
 void SimulationStatistics::Reset()
 {
     txPackets = 0;
@@ -12,31 +17,31 @@ void SimulationStatistics::Reset()
     throughput = 0.0;
     delay = 0.0;
     jitter = 0.0;
-    pdr = 0.0;
 
-    initialEnergy = 0.0;
-    remainingEnergy = 0.0;
-    consumedEnergy = 0.0;
+    packetDeliveryRatio = 0.0;
+
+    energyConsumed = 0.0;
 }
 
 void SimulationStatistics::Print() const
 {
-    std::cout << "\n========== Simulation Statistics ==========\n";
+    std::cout << "\n========== PHOENIX Statistics ==========\n";
 
-    std::cout << "Tx Packets        : " << txPackets << std::endl;
-    std::cout << "Rx Packets        : " << rxPackets << std::endl;
-    std::cout << "Lost Packets      : " << lostPackets << std::endl;
+    std::cout << "Tx Packets : " << txPackets << std::endl;
+    std::cout << "Rx Packets : " << rxPackets << std::endl;
+    std::cout << "Lost Packets : " << lostPackets << std::endl;
 
-    std::cout << "Throughput (Kbps) : " << throughput << std::endl;
-    std::cout << "Delay (s)         : " << delay << std::endl;
-    std::cout << "Jitter (s)        : " << jitter << std::endl;
-    std::cout << "PDR (%)           : " << pdr << std::endl;
+    std::cout << "Throughput : " << throughput << " Kbps" << std::endl;
 
-    std::cout << "Initial Energy    : " << initialEnergy << std::endl;
-    std::cout << "Remaining Energy  : " << remainingEnergy << std::endl;
-    std::cout << "Consumed Energy   : " << consumedEnergy << std::endl;
+    std::cout << "Delay : " << delay << std::endl;
 
-    std::cout << "===========================================\n";
+    std::cout << "Jitter : " << jitter << std::endl;
+
+    std::cout << "PDR : " << packetDeliveryRatio << "%" << std::endl;
+
+    std::cout << "Energy : " << energyConsumed << std::endl;
+
+    std::cout << "========================================\n";
 }
 
 }
