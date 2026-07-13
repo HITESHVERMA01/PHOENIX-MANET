@@ -1,47 +1,30 @@
 #include "statistics.h"
 
+#include <iostream>
+
 namespace ns3
 {
 
-SimulationStatistics::SimulationStatistics()
+void
+Statistics::PrintFlowStatistics(
+    Ptr<FlowMonitor> monitor
+)
 {
-    Reset();
-}
+    monitor->CheckForLostPackets();
 
-void SimulationStatistics::Reset()
-{
-    txPackets = 0;
-    rxPackets = 0;
-    lostPackets = 0;
+    std::map<FlowId, FlowMonitor::FlowStats> stats =
+        monitor->GetFlowStats();
 
-    throughput = 0.0;
-    delay = 0.0;
-    jitter = 0.0;
+    std::cout
+        << "\n========== FLOW SUMMARY ==========\n";
 
-    packetDeliveryRatio = 0.0;
+    std::cout
+        << "Total Flows : "
+        << stats.size()
+        << std::endl;
 
-    energyConsumed = 0.0;
-}
-
-void SimulationStatistics::Print() const
-{
-    std::cout << "\n========== PHOENIX Statistics ==========\n";
-
-    std::cout << "Tx Packets : " << txPackets << std::endl;
-    std::cout << "Rx Packets : " << rxPackets << std::endl;
-    std::cout << "Lost Packets : " << lostPackets << std::endl;
-
-    std::cout << "Throughput : " << throughput << " Kbps" << std::endl;
-
-    std::cout << "Delay : " << delay << std::endl;
-
-    std::cout << "Jitter : " << jitter << std::endl;
-
-    std::cout << "PDR : " << packetDeliveryRatio << "%" << std::endl;
-
-    std::cout << "Energy : " << energyConsumed << std::endl;
-
-    std::cout << "========================================\n";
+    std::cout
+        << "==================================\n";
 }
 
 }
