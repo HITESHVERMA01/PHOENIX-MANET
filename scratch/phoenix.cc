@@ -79,6 +79,7 @@
 #include "ns3/dsr-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/yans-wifi-helper.h"
+#include "ns3/wifi-module.h"
 #include "ns3/flow-monitor-module.h"
 
 using namespace ns3;
@@ -423,12 +424,15 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
 
   CheckThroughput ();
 
-  Simulator::Stop (Seconds (TotalTime));
-  Simulator::Run ();
-  m_flowMonitor->CheckForLostPackets();
+ FlowMonitorHelper flowmon;
 
-  //flowmon->SerializeToXmlFile ((tr_name + ".flowmon").c_str(), false, false);
+Ptr<FlowMonitor> monitor = flowmon.InstallAll();
 
-  Simulator::Destroy ();
+Simulator::Stop(Seconds(TotalTime));
+
+Simulator::Run();
+monitor->CheckForLostPackets();
+std::map<FlowId, FlowMonitor::FlowStats> stats =
+    monitor->GetFlowStats();
 }
 
