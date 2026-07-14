@@ -424,15 +424,66 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
 
   CheckThroughput ();
 
- FlowMonitorHelper flowmon;
-
-Ptr<FlowMonitor> monitor = flowmon.InstallAll();
 
 Simulator::Stop(Seconds(TotalTime));
 
 Simulator::Run();
-monitor->CheckForLostPackets();
+m_flowMonitor->CheckForLostPackets();
+
 std::map<FlowId, FlowMonitor::FlowStats> stats =
-    monitor->GetFlowStats();
+    m_flowMonitor->GetFlowStats();
+std::cout << "\n==============================\n";
+std::cout << "FLOW SUMMARY\n";
+std::cout << "==============================\n";
+
+for (const auto &flow : stats)
+{
+    std::cout << "Flow ID : " << flow.first << std::endl;
+
+    std::cout << "Tx Packets : "
+              << flow.second.txPackets << std::endl;
+
+    std::cout << "Rx Packets : "
+              << flow.second.rxPackets << std::endl;
+
+    std::cout << "Lost Packets : "
+              << flow.second.lostPackets << std::endl;
+
+    std::cout << "Delay Sum : "
+              << flow.second.delaySum.GetSeconds()
+              << " s" << std::endl;
+
+    std::cout << "Jitter Sum : "
+              << flow.second.jitterSum.GetSeconds()
+              << " s" << std::endl;
+
+    std::cout << "------------------------------\n";
+}
+std::ofstream flowCsv("results/flow_statistics.csv");
+
+flowCsv
+    << "FlowID,"
+    << "TxPackets,"
+    << "RxPackets,"
+    << "LostPackets,"
+    << "Delay,"
+    << "Jitter\n";
+
+for (const auto &flow : stats)
+{
+    flowCsv
+        << flow.first << ","
+        << flow.second.txPackets << ","
+        << flow.second.rxPackets << ","
+        << flow.second.lostPackets << ","
+        << flow.second.delaySum.GetSeconds() << ","
+        << flow.second.jitterSum.GetSeconds()
+        << "\n";
+}
+
+flowCsv.close();
+
+std::cout << "\nFlow statistics saved to flow_statistics.csv\n";
+    Simulator::Destroy();
 }
 
