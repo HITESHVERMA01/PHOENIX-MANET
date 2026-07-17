@@ -198,7 +198,7 @@ RoutingExperiment::CheckThroughput ()
 
   std::ofstream out (m_CSVfileName.c_str (), std::ios::app);
 
-  cout << (Simulator::Now ()).GetSeconds () << ","
+  out << (Simulator::Now ()).GetSeconds () << ","
       << kbs << ","
       << packetsReceived << ","
       << m_nSinks << ","
