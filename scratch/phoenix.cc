@@ -198,7 +198,7 @@ RoutingExperiment::CheckThroughput ()
 
   std::ofstream out (m_CSVfileName.c_str (), std::ios::app);
 
-  out << (Simulator::Now ()).GetSeconds () << ","
+  cout << (Simulator::Now ()).GetSeconds () << ","
       << kbs << ","
       << packetsReceived << ","
       << m_nSinks << ","
@@ -444,6 +444,7 @@ double totalDelay = 0.0;
 double totalJitter = 0.0;
 uint64_t totalRxBytes = 0;
 
+
 for (const auto &flow : stats)
 {
   totalTxPackets += flow.second.txPackets;
@@ -496,8 +497,7 @@ if (totalRxPackets > 0)
 }
 
 // Replace 100.0 with your simulation time variable later if needed
-double simulationTime = 100.0;
-throughput = (totalRxBytes * 8.0) / (simulationTime * 1000000.0);
+throughput =(totalRxBytes * 8.0) /(TotalTime * 1000000.0);
 
 std::cout << "\n==============================\n";
 std::cout << "NETWORK SUMMARY\n";
@@ -551,6 +551,46 @@ for (const auto &flow : stats)
 
 flowCsv.close();
 
+std::ofstream summaryCsv("results_summary.csv");
+
+if (!summaryCsv.is_open())
+{
+    std::cerr << "ERROR: Could not create results_summary.csv" << std::endl;
+    return;
+}
+summaryCsv
+    << "Protocol,"
+    << "Nodes,"
+    << "SimulationTime,"
+    << "Speed,"
+    << "TxPackets,"
+    << "RxPackets,"
+    << "LostPackets,"
+    << "PDR,"
+    << "PacketLoss,"
+    << "AverageDelay,"
+    << "AverageJitter,"
+    << "Throughput\n";
+
+    summaryCsv
+    << "AODV,"
+    << nWifis << ","
+    << TotalTime << ","
+    << nodeSpeed << ","
+    << totalTxPackets << ","
+    << totalRxPackets << ","
+    << totalLostPackets << ","
+    << pdr << ","
+    << packetLoss << ","
+    << avgDelay << ","
+    << avgJitter << ","
+    << throughput
+    << "\n";
+
+    summaryCsv.close();
+
+std::cout
+    << "Network summary saved to results_summary.csv\n";
 
 std::cout << "\nFlow statistics saved to flow_statistics.csv\n";
     Simulator::Destroy();
