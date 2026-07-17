@@ -459,7 +459,13 @@ for (const auto &flow : stats)
 
     std::cout << "------------------------------\n";
 }
-std::ofstream flowCsv("results/flow_statistics.csv");
+
+std::ofstream flowCsv("flow_statistics.csv");
+if (!flowCsv.is_open())
+{
+    std::cerr << "ERROR: Could not create flow_statistics.csv" << std::endl;
+    return;
+}
 
 flowCsv
     << "FlowID,"
@@ -482,6 +488,7 @@ for (const auto &flow : stats)
 }
 
 flowCsv.close();
+
 
 std::cout << "\nFlow statistics saved to flow_statistics.csv\n";
     Simulator::Destroy();
