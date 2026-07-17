@@ -13,6 +13,7 @@ struct SimulationConfig
     uint32_t numberOfNodes = 20;
 
     double simulationTime = 100.0;
+    throughput =(totalRxBytes * 8.0) /(simulationTime * 1000000.0);
 
     double areaWidth = 1000.0;
 

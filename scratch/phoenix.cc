@@ -436,8 +436,25 @@ std::cout << "\n==============================\n";
 std::cout << "FLOW SUMMARY\n";
 std::cout << "==============================\n";
 
+uint64_t totalTxPackets = 0;
+uint64_t totalRxPackets = 0;
+uint64_t totalLostPackets = 0;
+
+double totalDelay = 0.0;
+double totalJitter = 0.0;
+uint64_t totalRxBytes = 0;
+
 for (const auto &flow : stats)
 {
+  totalTxPackets += flow.second.txPackets;
+  totalRxPackets += flow.second.rxPackets;
+  totalLostPackets += flow.second.lostPackets;
+
+  totalDelay += flow.second.delaySum.GetSeconds();
+  totalJitter += flow.second.jitterSum.GetSeconds();
+
+  totalRxBytes += flow.second.rxBytes;
+
     std::cout << "Flow ID : " << flow.first << std::endl;
 
     std::cout << "Tx Packets : "
@@ -459,6 +476,51 @@ for (const auto &flow : stats)
 
     std::cout << "------------------------------\n";
 }
+
+double pdr = 0.0;
+double packetLoss = 0.0;
+double avgDelay = 0.0;
+double avgJitter = 0.0;
+double throughput = 0.0;
+
+if (totalTxPackets > 0)
+{
+    pdr = (double)totalRxPackets * 100.0 / totalTxPackets;
+    packetLoss = (double)totalLostPackets * 100.0 / totalTxPackets;
+}
+
+if (totalRxPackets > 0)
+{
+    avgDelay = totalDelay / totalRxPackets;
+    avgJitter = totalJitter / totalRxPackets;
+}
+
+// Replace 100.0 with your simulation time variable later if needed
+double simulationTime = 100.0;
+throughput = (totalRxBytes * 8.0) / (simulationTime * 1000000.0);
+
+std::cout << "\n==============================\n";
+std::cout << "NETWORK SUMMARY\n";
+std::cout << "==============================\n";
+
+std::cout << "Total Tx Packets : " << totalTxPackets << std::endl;
+std::cout << "Total Rx Packets : " << totalRxPackets << std::endl;
+std::cout << "Total Lost Packets : " << totalLostPackets << std::endl;
+
+std::cout << "PDR : " << pdr << " %" << std::endl;
+std::cout << "Packet Loss : " << packetLoss << " %" << std::endl;
+
+std::cout << "Average Delay : "
+          << avgDelay
+          << " s" << std::endl;
+
+std::cout << "Average Jitter : "
+          << avgJitter
+          << " s" << std::endl;
+
+std::cout << "Throughput : "
+          << throughput
+          << " Mbps" << std::endl;
 
 std::ofstream flowCsv("flow_statistics.csv");
 if (!flowCsv.is_open())
