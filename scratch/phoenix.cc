@@ -550,27 +550,31 @@ for (const auto &flow : stats)
 }
 
 flowCsv.close();
-
-std::ofstream summaryCsv("results_summary.csv");
+std::ifstream checkFile("results_summary.csv");
+bool writeHeader = !checkFile.good() || checkFile.peek() == std::ifstream::traits_type::eof();
+checkFile.close();
 
 if (!summaryCsv.is_open())
 {
     std::cerr << "ERROR: Could not create results_summary.csv" << std::endl;
     return;
 }
-summaryCsv
-    << "Protocol,"
-    << "Nodes,"
-    << "SimulationTime,"
-    << "Speed,"
-    << "TxPackets,"
-    << "RxPackets,"
-    << "LostPackets,"
-    << "PDR,"
-    << "PacketLoss,"
-    << "AverageDelay,"
-    << "AverageJitter,"
-    << "Throughput\n";
+if (!fileExists)
+{
+    summaryCsv
+        << "Protocol,"
+        << "Nodes,"
+        << "SimulationTime,"
+        << "Speed,"
+        << "TxPackets,"
+        << "RxPackets,"
+        << "LostPackets,"
+        << "PDR,"
+        << "PacketLoss,"
+        << "AverageDelay,"
+        << "AverageJitter,"
+        << "Throughput\n";
+}
 
     summaryCsv
     << "AODV,"
