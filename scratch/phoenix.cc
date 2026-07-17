@@ -550,13 +550,7 @@ for (const auto &flow : stats)
 }
 
 flowCsv.close();
-
-std::ifstream checkFile("results_summary.csv");
-bool writeHeader =
-    !checkFile.good() ||
-    checkFile.peek() == std::ifstream::traits_type::eof();
-checkFile.close();
-
+bool fileExists = std::filesystem::exists("results_summary.csv");
 std::ofstream summaryCsv("results_summary.csv", std::ios::app);
 
 if (!summaryCsv.is_open())
@@ -564,25 +558,21 @@ if (!summaryCsv.is_open())
     std::cerr << "ERROR: Could not create results_summary.csv" << std::endl;
     return;
 }
-
-if (writeHeader)
-{
-    summaryCsv
-        << "Protocol,"
-        << "Nodes,"
-        << "SimulationTime,"
-        << "Speed,"
-        << "TxPackets,"
-        << "RxPackets,"
-        << "LostPackets,"
-        << "PDR,"
-        << "PacketLoss,"
-        << "AverageDelay,"
-        << "AverageJitter,"
-        << "Throughput\n";
-}
-
 summaryCsv
+    << "Protocol,"
+    << "Nodes,"
+    << "SimulationTime,"
+    << "Speed,"
+    << "TxPackets,"
+    << "RxPackets,"
+    << "LostPackets,"
+    << "PDR,"
+    << "PacketLoss,"
+    << "AverageDelay,"
+    << "AverageJitter,"
+    << "Throughput\n";
+
+    summaryCsv
     << "AODV,"
     << nWifis << ","
     << TotalTime << ","
@@ -597,10 +587,12 @@ summaryCsv
     << throughput
     << "\n";
 
-summaryCsv.close();
+    summaryCsv.close();
 
-std::cout << "Network summary saved to results_summary.csv\n";
+std::cout
+    << "Network summary saved to results_summary.csv\n";
 
 std::cout << "\nFlow statistics saved to flow_statistics.csv\n";
+    Simulator::Destroy();
+}
 
-Simulator::Destroy();
