@@ -233,8 +233,7 @@ RoutingExperiment::CommandSetup (int argc, char **argv)
   return m_CSVfileName;
 }
 
-int
-main (int argc, char *argv[])
+int main (int argc, char *argv[])
 {
   RoutingExperiment experiment;
   std::string CSVfileName = experiment.CommandSetup (argc,argv);
