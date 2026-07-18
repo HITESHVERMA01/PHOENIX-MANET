@@ -551,14 +551,16 @@ for (const auto &flow : stats)
 
 flowCsv.close();
 
-std::ifstream checkFile("results_summary.csv");
+const std::string summaryFile =
+    "/mnt/d/projects/PHOENIX-MANET/results/results_summary.csv";
+
+std::ifstream checkFile(summaryFile);
 bool writeHeader =
     !checkFile.good() ||
     checkFile.peek() == std::ifstream::traits_type::eof();
 checkFile.close();
 
-std::ofstream summaryCsv("results_summary.csv", std::ios::app);
-
+std::ofstream summaryCsv(summaryFile, std::ios::app);
 if (!summaryCsv.is_open())
 {
     std::cerr << "ERROR: Could not create results_summary.csv" << std::endl;
