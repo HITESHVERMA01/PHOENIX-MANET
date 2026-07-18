@@ -323,7 +323,7 @@ EnergySourceContainer sources =
 // ===============================
 
 WifiRadioEnergyModelHelper radioEnergyHelper;
-DeviceEnergyModelContainer deviceModels =
+radioEnergyHelper.Install(adhocDevices, sources);
     radioEnergyHelper.Install(adhocDevices, sources);
   MobilityHelper mobilityAdhoc;
   [[maybe_unused]] int64_t streamIndex = 0; // used to get consistent mobility across scenarios
