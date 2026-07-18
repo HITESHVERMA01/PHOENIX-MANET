@@ -318,6 +318,13 @@ EnergySourceContainer sources =
   wifiMac.SetType ("ns3::AdhocWifiMac");
   NetDeviceContainer adhocDevices = wifi.Install (wifiPhy, wifiMac, adhocNodes);
 
+  // ===============================
+// WiFi Radio Energy Model
+// ===============================
+
+WifiRadioEnergyModelHelper radioEnergyHelper;
+DeviceEnergyModelContainer deviceModels =
+    radioEnergyHelper.Install(adhocDevices, sources);
   MobilityHelper mobilityAdhoc;
   [[maybe_unused]] int64_t streamIndex = 0; // used to get consistent mobility across scenarios
 
