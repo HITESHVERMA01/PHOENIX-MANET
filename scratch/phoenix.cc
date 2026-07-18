@@ -82,6 +82,8 @@
 #include "ns3/yans-wifi-helper.h"
 #include "ns3/wifi-module.h"
 #include "ns3/flow-monitor-module.h"
+#include "ns3/energy-module.h"
+#include "ns3/wifi-radio-energy-model.h"
 
 using namespace ns3;
 using namespace dsr;
@@ -522,7 +524,10 @@ std::cout << "Throughput : "
           << throughput
           << " Mbps" << std::endl;
 
-std::ofstream flowCsv("flow_statistics.csv");
+const std::string resultsDir = "/mnt/d/projects/PHOENIX-MANET/results/";
+const std::string flowFile = resultsDir + "flow_statistics.csv";
+
+std::ofstream flowCsv(flowFile);
 if (!flowCsv.is_open())
 {
     std::cerr << "ERROR: Could not create flow_statistics.csv" << std::endl;
@@ -551,8 +556,10 @@ for (const auto &flow : stats)
 
 flowCsv.close();
 
-const std::string summaryFile =
-    "/mnt/d/projects/PHOENIX-MANET/results/results_summary.csv";
+// ---------- File Paths ----------
+const std::string resultsDir = "/mnt/d/projects/PHOENIX-MANET/results/";
+const std::string summaryFile = resultsDir + "results_summary.csv";
+const std::string flowFile = resultsDir + "flow_statistics.csv";
 
 std::ifstream checkFile(summaryFile);
 bool writeHeader =
@@ -560,7 +567,9 @@ bool writeHeader =
     checkFile.peek() == std::ifstream::traits_type::eof();
 checkFile.close();
 
+// ---------- Open summary file ----------
 std::ofstream summaryCsv(summaryFile, std::ios::app);
+
 if (!summaryCsv.is_open())
 {
     std::cerr << "ERROR: Could not create results_summary.csv" << std::endl;
