@@ -285,6 +285,17 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
   NodeContainer adhocNodes;
   adhocNodes.Create (nWifis);
 
+  // ===============================
+// Energy Source Configuration
+// ===============================
+
+BasicEnergySourceHelper basicSourceHelper;
+basicSourceHelper.Set("BasicEnergySourceInitialEnergyJ",
+                      DoubleValue(100.0));
+
+EnergySourceContainer sources =
+    basicSourceHelper.Install(adhocNodes);
+
   // setting up wifi phy and channel using helpers
   WifiHelper wifi;
   wifi.SetStandard (WIFI_STANDARD_80211b);
