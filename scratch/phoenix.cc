@@ -449,7 +449,8 @@ Simulator::Stop(Seconds(TotalTime));
 
 Simulator::Run();
 m_flowMonitor->CheckForLostPackets();
-
+Ptr<Ipv4FlowClassifier> classifier =
+    DynamicCast<Ipv4FlowClassifier>(m_flowHelper.GetClassifier());
 std::map<FlowId, FlowMonitor::FlowStats> stats =
     m_flowMonitor->GetFlowStats();
 std::cout << "\n==============================\n";
@@ -464,6 +465,31 @@ double totalDelay = 0.0;
 double totalJitter = 0.0;
 uint64_t totalRxBytes = 0;
 
+// ===============================
+// Energy Statistics
+// ===============================
+
+double totalRemainingEnergy = 0.0;
+double totalConsumedEnergy = 0.0;
+
+for (EnergySourceContainer::Iterator it = sources.Begin();
+     it != sources.End();
+     ++it)
+{
+    Ptr<BasicEnergySource> source =
+        DynamicCast<BasicEnergySource>(*it);
+
+    double remaining = source->GetRemainingEnergy();
+
+    totalRemainingEnergy += remaining;
+    totalConsumedEnergy += (100.0 - remaining);
+}
+
+double averageRemainingEnergy =
+    totalRemainingEnergy / nWifis;
+
+double averageConsumedEnergy =
+    totalConsumedEnergy / nWifis;
 
 for (const auto &flow : stats)
 {
@@ -542,8 +568,30 @@ std::cout << "Throughput : "
           << throughput
           << " Mbps" << std::endl;
 
-const std::string resultsDir = "/mnt/d/projects/PHOENIX-MANET/results/";
-const std::string flowFile = resultsDir + "flow_statistics.csv";
+std::cout << "Total Remaining Energy : "
+          << totalRemainingEnergy
+          << " J" << std::endl;
+
+std::cout << "Total Consumed Energy : "
+          << totalConsumedEnergy
+          << " J" << std::endl;
+
+std::cout << "Average Remaining Energy : "
+          << averageRemainingEnergy
+          << " J" << std::endl;
+
+std::cout << "Average Consumed Energy : "
+          << averageConsumedEnergy
+          << " J" << std::endl;
+
+const std::string resultsDir =
+    "/mnt/d/projects/PHOENIX-MANET/results/";
+
+const std::string summaryFile =
+    resultsDir + "results_summary.csv";
+
+const std::string flowFile =
+    resultsDir + "flow_statistics.csv";
 
 std::ofstream flowCsv(flowFile);
 if (!flowCsv.is_open())
@@ -574,10 +622,7 @@ for (const auto &flow : stats)
 
 flowCsv.close();
 
-// ---------- File Paths ----------
-const std::string resultsDir = "/mnt/d/projects/PHOENIX-MANET/results/";
-const std::string summaryFile = resultsDir + "results_summary.csv";
-const std::string flowFile = resultsDir + "flow_statistics.csv";
+
 
 std::ifstream checkFile(summaryFile);
 bool writeHeader =
@@ -597,18 +642,22 @@ if (!summaryCsv.is_open())
 if (writeHeader)
 {
     summaryCsv
-        << "Protocol,"
-        << "Nodes,"
-        << "SimulationTime,"
-        << "Speed,"
-        << "TxPackets,"
-        << "RxPackets,"
-        << "LostPackets,"
-        << "PDR,"
-        << "PacketLoss,"
-        << "AverageDelay,"
-        << "AverageJitter,"
-        << "Throughput\n";
+    << "Protocol,"
+    << "Nodes,"
+    << "SimulationTime,"
+    << "Speed,"
+    << "TxPackets,"
+    << "RxPackets,"
+    << "LostPackets,"
+    << "PDR,"
+    << "PacketLoss,"
+    << "AverageDelay,"
+    << "AverageJitter,"
+    << "Throughput,"
+    << "TotalRemainingEnergy,"
+    << "TotalConsumedEnergy,"
+    << "AverageRemainingEnergy,"
+    << "AverageConsumedEnergy\n";
 }
 
 summaryCsv
@@ -623,7 +672,11 @@ summaryCsv
     << packetLoss << ","
     << avgDelay << ","
     << avgJitter << ","
-    << throughput
+    << throughput << ","
+    << totalRemainingEnergy << ","
+    << totalConsumedEnergy << ","
+    << averageRemainingEnergy << ","
+    << averageConsumedEnergy
     << "\n";
 
 summaryCsv.close();
