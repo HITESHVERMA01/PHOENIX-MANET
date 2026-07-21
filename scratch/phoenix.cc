@@ -293,7 +293,7 @@ BasicEnergySourceHelper basicSourceHelper;
 basicSourceHelper.Set("BasicEnergySourceInitialEnergyJ",
                       DoubleValue(100.0));
 
-EnergySourceContainer sources =
+ns3::energy::EnergySourceContainer sources =
     basicSourceHelper.Install(adhocNodes);
 
   // setting up wifi phy and channel using helpers
@@ -472,12 +472,12 @@ uint64_t totalRxBytes = 0;
 double totalRemainingEnergy = 0.0;
 double totalConsumedEnergy = 0.0;
 
-for (EnergySourceContainer::Iterator it = sources.Begin();
+for (ns3::energy::EnergySourceContainer::Iterator it = sources.Begin();
      it != sources.End();
      ++it)
 {
-    Ptr<BasicEnergySource> source =
-        DynamicCast<BasicEnergySource>(*it);
+    Ptr<ns3::energy::BasicEnergySource> source =
+    DynamicCast<ns3::energy::BasicEnergySource>(*it);
 
     double remaining = source->GetRemainingEnergy();
 
