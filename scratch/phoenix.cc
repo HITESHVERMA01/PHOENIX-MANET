@@ -291,7 +291,7 @@ RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
 
 BasicEnergySourceHelper basicSourceHelper;
 basicSourceHelper.Set("BasicEnergySourceInitialEnergyJ",
-                      DoubleValue(100.0));
+                      DoubleValue(10000.0));
 
 ns3::energy::EnergySourceContainer sources =
     basicSourceHelper.Install(adhocNodes);
@@ -323,7 +323,6 @@ ns3::energy::EnergySourceContainer sources =
 // ===============================
 
 WifiRadioEnergyModelHelper radioEnergyHelper;
-radioEnergyHelper.Install(adhocDevices, sources);
     radioEnergyHelper.Install(adhocDevices, sources);
   MobilityHelper mobilityAdhoc;
   [[maybe_unused]] int64_t streamIndex = 0; // used to get consistent mobility across scenarios
@@ -482,7 +481,7 @@ for (ns3::energy::EnergySourceContainer::Iterator it = sources.Begin();
     double remaining = source->GetRemainingEnergy();
 
     totalRemainingEnergy += remaining;
-    totalConsumedEnergy += (100.0 - remaining);
+    totalConsumedEnergy += (10000.0 - remaining);
 }
 
 double averageRemainingEnergy =
