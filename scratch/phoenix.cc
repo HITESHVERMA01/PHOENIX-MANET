@@ -84,28 +84,32 @@
 #include "ns3/flow-monitor-module.h"
 #include "ns3/energy-module.h"
 #include "ns3/wifi-radio-energy-model.h"
+#include "ns3/flow-monitor-helper.h"
+#include "ns3/flow-monitor.h"
+
+
 
 using namespace ns3;
 using namespace dsr;
+
+
 
 NS_LOG_COMPONENT_DEFINE ("manet-routing-compare");
 
 /**
  * Routing experiment class.
- * 
+ *
  * It handles the creation and run of an experiment.
  */
 class RoutingExperiment
 {
 public:
   RoutingExperiment ();
-  /**
-   * Run the experiment.
-   * \param nSinks The number of Sink Nodes.
-   * \param txp The Tx power.
-   * \param CSVfileName The output CSV filename.
-   */
-  void Run (int nSinks, double txp, std::string CSVfileName);
+/**
+ * Run the experiment.
+ * \param CSVfileName The output CSV filename.
+ */
+void Run (std::string CSVfileName);
   //static void SetMACParam (ns3::NetDeviceContainer & devices,
   //                                 int slotDistance);
   /**
@@ -139,11 +143,23 @@ private:
   uint32_t packetsReceived; //!< Total received packets.
 
   std::string m_CSVfileName;  //!< CSV filename.
-  int m_nSinks;               //!< Number of sink nodes.
+  uint32_t m_nSinks;               //!< Number of sink nodes.
   std::string m_protocolName; //!< Protocol name.
   double m_txp;               //!< Tx power.
   bool m_traceMobility;       //!< Enavle mobility tracing.
-  uint32_t m_protocol;   
+  uint32_t m_protocol;
+    // ===============================
+  // Experiment Configuration
+  // ===============================
+  uint32_t m_nNodes;
+  double m_totalTime;
+  double m_nodeSpeed;
+  double m_nodePause;
+  double m_appStartMin;
+  std::string m_dataRate;
+  uint32_t m_packetSize;
+  uint32_t m_rngSeed;
+  uint32_t m_rngRun;
 
 FlowMonitorHelper m_flowHelper;
 
@@ -155,8 +171,20 @@ RoutingExperiment::RoutingExperiment ()
     bytesTotal (0),
     packetsReceived (0),
     m_CSVfileName ("manet-routing.output.csv"),
+    m_nSinks (1),
+    m_protocolName ("AODV"),
+    m_txp (20.0),
     m_traceMobility (false),
-    m_protocol (2) // AODV
+    m_protocol (2),
+    m_nNodes (50),
+    m_totalTime (1000.0),
+    m_nodeSpeed (5.0),
+    m_nodePause (0.0),
+    m_appStartMin (5.0),
+    m_dataRate ("2Mbps"),
+    m_packetSize (512),
+    m_rngSeed (12345),
+    m_rngRun (1)
 {
 }
 
@@ -224,60 +252,145 @@ RoutingExperiment::SetupPacketReceive (Ipv4Address addr, Ptr<Node> node)
 
   return sink;
 }
-
 std::string
 RoutingExperiment::CommandSetup (int argc, char **argv)
 {
   CommandLine cmd (__FILE__);
-  cmd.AddValue ("CSVfileName", "The name of the CSV output file name", m_CSVfileName);
-  cmd.AddValue ("traceMobility", "Enable mobility tracing", m_traceMobility);
-  cmd.AddValue ("protocol", "1=OLSR;2=AODV;3=DSDV;4=DSR", m_protocol);
+
+  // Output
+  cmd.AddValue ("CSVfileName",
+                "The name of the CSV output file",
+                m_CSVfileName);
+
+  // Routing
+  cmd.AddValue ("protocol",
+                "1=OLSR;2=AODV;3=DSDV;4=DSR",
+                m_protocol);
+
+  // Experiment configuration
+  cmd.AddValue ("nodes",
+                "Number of wireless nodes",
+                m_nNodes);
+
+  cmd.AddValue ("simTime",
+                "Simulation time in seconds",
+                m_totalTime);
+
+  cmd.AddValue ("speed",
+                "Maximum node speed in m/s",
+                m_nodeSpeed);
+
+  cmd.AddValue ("pause",
+                "Node pause time in seconds",
+                m_nodePause);
+
+  cmd.AddValue ("flows",
+                "Number of source/sink flows",
+                m_nSinks);
+
+  cmd.AddValue ("txPower",
+                "Transmission power in dBm",
+                m_txp);
+
+  cmd.AddValue ("dataRate",
+                "Application data rate",
+                m_dataRate);
+
+  cmd.AddValue ("packetSize",
+                "Application packet size in bytes",
+                m_packetSize);
+
+  // Reproducibility
+  cmd.AddValue ("seed",
+                "Global random seed",
+                m_rngSeed);
+
+  cmd.AddValue ("run",
+                "Random-number-generator run number",
+                m_rngRun);
+
+  cmd.AddValue ("appStart",
+              "Minimum application start time in seconds",
+              m_appStartMin);
+
   cmd.Parse (argc, argv);
+
+  // Basic configuration validation
+  NS_ABORT_MSG_IF (
+      m_nNodes < 2,
+      "nodes must be at least 2");
+
+  NS_ABORT_MSG_IF (
+      m_nSinks < 0 || (m_nSinks * 2) > m_nNodes,
+      "flows must be >= 1 and 2*flows <= nodes");
+
+  NS_ABORT_MSG_IF (
+      m_totalTime <= 0.0,
+      "simTime must be greater than 0");
+
+  NS_ABORT_MSG_IF (
+      m_nodeSpeed < 0.0,
+      "speed cannot be negative");
+
+  NS_ABORT_MSG_IF (
+      m_txp <= 0.0,
+      "txPower must be greater than 0");
+
+  // Fix random seed/run before simulation objects are created.
+  RngSeedManager::SetSeed (m_rngSeed);
+  RngSeedManager::SetRun (m_rngRun);
+
   return m_CSVfileName;
 }
+
 
 int main (int argc, char *argv[])
 {
   RoutingExperiment experiment;
-  std::string CSVfileName = experiment.CommandSetup (argc,argv);
 
-  //blank out the last output file and write the column headers
+  std::string CSVfileName =
+      experiment.CommandSetup (argc, argv);
+
+  // Blank out the legacy per-second CSV file
+  // and write its headers.
   std::ofstream out (CSVfileName.c_str ());
-  out << "SimulationSecond," <<
-  "ReceiveRate," <<
-  "PacketsReceived," <<
-  "NumberOfSinks," <<
-  "RoutingProtocol," <<
-  "TransmissionPower" <<
-  std::endl;
+
+  out << "SimulationSecond,"
+      << "ReceiveRate,"
+      << "PacketsReceived,"
+      << "NumberOfSinks,"
+      << "RoutingProtocol,"
+      << "TransmissionPower"
+      << std::endl;
+
   out.close ();
 
-  int nSinks = 10;
-  double txp = 7.5;
-
-  experiment.Run (nSinks, txp, CSVfileName);
+  experiment.Run (CSVfileName);
 }
 
 void
-RoutingExperiment::Run (int nSinks, double txp, std::string CSVfileName)
+RoutingExperiment::Run (std::string CSVfileName)
 {
   Packet::EnablePrinting ();
-  m_nSinks = nSinks;
-  m_txp = txp;
   m_CSVfileName = CSVfileName;
 
-  int nWifis = 50;
+  uint32_t nWifis = m_nNodes;
 
-  double TotalTime = 200.0;
-  std::string rate ("2048bps");
-  std::string phyMode ("DsssRate11Mbps");
-  std::string tr_name ("manet-routing-compare");
-  int nodeSpeed = 20; //in m/s
-  int nodePause = 0; //in s
-  m_protocolName = "protocol";
+double TotalTime = m_totalTime;
+std::string rate (m_dataRate);
+std::string phyMode ("DsssRate11Mbps");
+std::string tr_name ("manet-routing-compare");
 
-  Config::SetDefault  ("ns3::OnOffApplication::PacketSize",StringValue ("64"));
-  Config::SetDefault ("ns3::OnOffApplication::DataRate",  StringValue (rate));
+double nodeSpeed = m_nodeSpeed;
+double nodePause = m_nodePause;
+
+Config::SetDefault(
+    "ns3::OnOffApplication::PacketSize",
+    UintegerValue(m_packetSize));
+
+Config::SetDefault(
+    "ns3::OnOffApplication::DataRate",
+    StringValue(rate));
 
   //Set Non-unicastMode rate to unicast mode
   Config::SetDefault ("ns3::WifiRemoteStationManager::NonUnicastMode",StringValue (phyMode));
@@ -302,8 +415,11 @@ ns3::energy::EnergySourceContainer sources =
 
   YansWifiPhyHelper wifiPhy;
   YansWifiChannelHelper wifiChannel;
-  wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
-  wifiChannel.AddPropagationLoss ("ns3::FriisPropagationLossModel");
+  wifiChannel.SetPropagationDelay(
+    "ns3::ConstantSpeedPropagationDelayModel");
+
+wifiChannel.AddPropagationLoss(
+    "ns3::LogDistancePropagationLossModel");
   wifiPhy.SetChannel (wifiChannel.Create ());
 
   // Add a mac and disable rate control
@@ -312,8 +428,8 @@ ns3::energy::EnergySourceContainer sources =
                                 "DataMode",StringValue (phyMode),
                                 "ControlMode",StringValue (phyMode));
 
-  wifiPhy.Set ("TxPowerStart",DoubleValue (txp));
-  wifiPhy.Set ("TxPowerEnd", DoubleValue (txp));
+  wifiPhy.Set ("TxPowerStart", DoubleValue (m_txp));
+wifiPhy.Set ("TxPowerEnd", DoubleValue (m_txp));
 
   wifiMac.SetType ("ns3::AdhocWifiMac");
   NetDeviceContainer adhocDevices = wifi.Install (wifiPhy, wifiMac, adhocNodes);
@@ -328,21 +444,37 @@ WifiRadioEnergyModelHelper radioEnergyHelper;
   [[maybe_unused]] int64_t streamIndex = 0; // used to get consistent mobility across scenarios
 
   ObjectFactory pos;
-  pos.SetTypeId ("ns3::RandomRectanglePositionAllocator");
-  pos.Set ("X", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=300.0]"));
-  pos.Set ("Y", StringValue ("ns3::UniformRandomVariable[Min=0.0|Max=1500.0]"));
+  pos.SetTypeId(
+    "ns3::RandomRectanglePositionAllocator");
+
+pos.Set(
+    "X",
+    StringValue(
+        "ns3::UniformRandomVariable[Min=0.0|Max=1000.0]"));
+
+pos.Set(
+    "Y",
+    StringValue(
+        "ns3::UniformRandomVariable[Min=0.0|Max=1000.0]"));
 
   Ptr<PositionAllocator> taPositionAlloc = pos.Create ()->GetObject<PositionAllocator> ();
   streamIndex += taPositionAlloc->AssignStreams (streamIndex);
 
   std::stringstream ssSpeed;
-  ssSpeed << "ns3::UniformRandomVariable[Min=0.0|Max=" << nodeSpeed << "]";
-  std::stringstream ssPause;
-  ssPause << "ns3::ConstantRandomVariable[Constant=" << nodePause << "]";
-  mobilityAdhoc.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
-                                  "Speed", StringValue (ssSpeed.str ()),
-                                  "Pause", StringValue (ssPause.str ()),
-                                  "PositionAllocator", PointerValue (taPositionAlloc));
+ssSpeed << "ns3::UniformRandomVariable[Min=1.0|Max="
+        << nodeSpeed
+        << "]";
+
+std::stringstream ssPause;
+ssPause << "ns3::ConstantRandomVariable[Constant="
+        << nodePause
+        << "]";
+
+mobilityAdhoc.SetMobilityModel(
+    "ns3::RandomWaypointMobilityModel",
+    "Speed", StringValue(ssSpeed.str()),
+    "Pause", StringValue(ssPause.str()),
+    "PositionAllocator", PointerValue(taPositionAlloc));
   mobilityAdhoc.SetPositionAllocator (taPositionAlloc);
   mobilityAdhoc.Install (adhocNodes);
   streamIndex += mobilityAdhoc.AssignStreams (adhocNodes, streamIndex);
@@ -398,7 +530,7 @@ WifiRadioEnergyModelHelper radioEnergyHelper;
   onoff1.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1.0]"));
   onoff1.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0.0]"));
 
-  for (int i = 0; i < nSinks; i++)
+  for (uint32_t i = 0; i < m_nSinks; ++i)
     {
       Ptr<Socket> sink = SetupPacketReceive (adhocInterfaces.GetAddress (i), adhocNodes.Get (i));
 
@@ -406,8 +538,11 @@ WifiRadioEnergyModelHelper radioEnergyHelper;
       onoff1.SetAttribute ("Remote", remoteAddress);
 
       Ptr<UniformRandomVariable> var = CreateObject<UniformRandomVariable> ();
-      ApplicationContainer temp = onoff1.Install (adhocNodes.Get (i + nSinks));
-      temp.Start (Seconds (var->GetValue (100.0,101.0)));
+      ApplicationContainer temp = onoff1.Install (adhocNodes.Get (i + m_nSinks));
+      temp.Start (
+    Seconds (
+        var->GetValue (m_appStartMin,
+                       m_appStartMin + 1.0)));
       temp.Stop (Seconds (TotalTime));
     }
 
